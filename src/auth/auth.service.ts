@@ -325,34 +325,68 @@ export class AuthService {
     }
   }
 
-  async generateUserTokens(userId) {
-    try {
-      let jwtSecret = this.configService.get('jwt.secret') || process.env.JWT_SECRET;
-      
-      if (!jwtSecret) {
-        console.error('JWT_SECRET is not defined in environment variables or config');
-        throw new InternalServerErrorException('JWT configuration error');
-      }
+  // Remplacez votre méthode generateUserTokens par celle-ci
 
-      console.log('JWT_SECRET found:', !!jwtSecret);
-      
-      const accessToken = this.jwtService.sign({ userId }, { 
-        expiresIn: '10h',
-        secret: jwtSecret
-      });
-      
-      const refreshToken = uuidv4();
-
-      await this.storeRefreshToken(refreshToken, userId);
-      return {
-        accessToken,
-        refreshToken,
-      };
-    } catch (error) {
-      console.error('Error generating tokens:', error);
-      throw new InternalServerErrorException('Failed to generate tokens');
+async generateUserTokens(userId) {
+  try {
+    let jwtSecret = this.configService.get('jwt.secret') || process.env.JWT_SECRET;
+    
+    if (!jwtSecret) {
+      console.error('JWT_SECRET is not defined in environment variables or config');
+      throw new InternalServerErrorException('JWT configuration error');
     }
+
+    console.log('JWT_SECRET found:', !!jwtSecret);
+    
+    // 🎯 CRITIQUE: Récupérer l'utilisateur complet pour inclure le rôle dans le JWT
+    const user = await this.UserModel.findById(userId).select('-motdepasse').exec();
+    
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    console.log('🔑 Generating token for user:', {
+      userId: user._id,
+      email: user.email,
+      nom: user.nom,
+      role: user.role, // ✅ LE RÔLE EST LÀ !
+    });
+
+    // ✅ SOLUTION: Créer le payload avec TOUTES les infos nécessaires
+    const payload = {
+      sub: user._id.toString(),
+      userId: user._id.toString(),
+      email: user.email,
+      nom: user.nom,
+      role: user.role, // ✅✅✅ CRITIQUE: Inclure le rôle !
+      poste: user.poste,
+      departement: user.departement,
+    };
+
+    console.log('🔑 JWT Payload:', payload);
+    
+    const accessToken = this.jwtService.sign(payload, { 
+      expiresIn: '10h',
+      secret: jwtSecret
+    });
+    
+    // Vérifier que le token contient bien le rôle
+    const decoded = this.jwtService.decode(accessToken);
+    console.log('🔍 Decoded token verification:', decoded);
+    
+    const refreshToken = uuidv4();
+
+    await this.storeRefreshToken(refreshToken, userId);
+    
+    return {
+      accessToken,
+      refreshToken,
+    };
+  } catch (error) {
+    console.error('Error generating tokens:', error);
+    throw new InternalServerErrorException('Failed to generate tokens');
   }
+}
 
   async storeRefreshToken(token: string, userId: string) {
     const expiryDate = new Date();

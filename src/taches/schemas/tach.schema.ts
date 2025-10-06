@@ -1,7 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-import { User } from 'src/auth/schemas/user.schema'; // تأكد من المسار الصحيح
+import { User } from 'src/auth/schemas/user.schema';
 
+/**
+ * Mongoose schema for a task (Tache) document.
+ */
 @Schema({ timestamps: true })
 export class Tache extends Document {
   @Prop({ required: true })
