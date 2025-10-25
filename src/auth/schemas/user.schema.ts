@@ -1,10 +1,11 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 
-export type UserDocument = User & Document;
+// Type correct pour un document Mongoose hydraté
+import { HydratedDocument } from 'mongoose';
 
 @Schema({ timestamps: true })
-export class User {
+export class User extends Document {
   @Prop({ required: true, trim: true })
   nom: string;
 
@@ -33,20 +34,20 @@ export class User {
   })
   departement: string;
 
-  // Optional fields for Google authentication
   @Prop({ required: false })
   googleId?: string;
 
   @Prop({ required: false })
   profilePicture?: string;
 
-  // OTP verification status
   @Prop({ default: false })
   otpVerified: boolean;
 
-  // Account status
   @Prop({ default: true })
   isActive: boolean;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
+
+// Export correct du type hydraté
+export type UserDocument = HydratedDocument<User>;

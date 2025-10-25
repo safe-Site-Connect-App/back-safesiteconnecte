@@ -87,11 +87,10 @@ export class TachesService {
    * @param updateTacheDto - Data for updating the task.
    * @returns The updated task.
    */
-  async update(id: string, updateTacheDto: UpdateTacheDto): Promise<Tache> {
+async update(id: string, updateTacheDto: UpdateTacheDto): Promise<Tache> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid task ID format');
     }
-
     if (updateTacheDto.assigneA && !Types.ObjectId.isValid(updateTacheDto.assigneA)) {
       throw new BadRequestException('Invalid user ID format');
     }
@@ -104,7 +103,6 @@ export class TachesService {
     if (!updated) {
       throw new NotFoundException(`Tâche avec l'ID ${id} non trouvée`);
     }
-
     return updated;
   }
 

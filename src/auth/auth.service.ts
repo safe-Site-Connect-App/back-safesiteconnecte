@@ -409,29 +409,37 @@ async generateUserTokens(userId) {
   }
 
   // Update user profile
-  async updateUserProfile(userId: string, updateData: Partial<User>) {
-    const allowedFields = ['nom', 'poste', 'departement'];
-    const filteredData = {};
-    
-    allowedFields.forEach(field => {
-      if (updateData[field]) {
-        filteredData[field] = updateData[field];
-      }
-    });
+ async updateUserProfile(userId: string, updateData: Partial<User>, requestingUserId?: string) {
+  const allowedFields = ['nom', 'email', 'poste', 'departement']; // Fields user can update
+  const filteredData = {};
 
-    const user = await this.UserModel.findByIdAndUpdate(
-      userId, 
-      filteredData, 
-      { new: true, runValidators: true }
-    ).select('-motdepasse');
-
-    if (!user) {
-      throw new NotFoundException('Utilisateur non trouvé');
+  allowedFields.forEach(field => {
+    if (updateData[field]) {
+      filteredData[field] = updateData[field];
     }
+  });
 
-    return { message: 'Profil mis à jour avec succès', user };
+  // Check email uniqueness if updated
+  if (filteredData['email'] && filteredData['email'] !== (await this.UserModel.findById(userId))?.email) {
+    const emailExists = await this.UserModel.findOne({ email: filteredData['email'], _id: { $ne: userId } });
+    if (emailExists) {
+      throw new BadRequestException('Cet email est déjà utilisé par un autre utilisateur');
+    }
   }
- 
+
+  const user = await this.UserModel.findByIdAndUpdate(
+    userId,
+    filteredData,
+    { new: true, runValidators: true }
+  ).select('-motdepasse');
+
+  if (!user) {
+    throw new NotFoundException('Utilisateur non trouvé');
+  }
+
+  return { message: 'Profil mis à jour avec succès', user };
+}
+
   async resetPassword(userIdOrEmail: string, resetPasswordDto: ResetPasswordOtpDto) {
     try {
       const { password } = resetPasswordDto;

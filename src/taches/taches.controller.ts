@@ -7,7 +7,8 @@ import {
   Param, 
   Delete, 
   UseGuards,
-  Request 
+  Request,
+  ForbiddenException 
 } from '@nestjs/common';
 import { TachesService } from './taches.service';
 import { CreateTacheDto } from './dto/create-tach.dto';
@@ -74,23 +75,43 @@ export class TachesController {
     return this.tachesService.findOne(id);
   }
 
-  /**
-   * Updates a task (admin only).
-   * @param id - Task ID.
-   * @param updateTacheDto - Data for updating the task.
-   * @param req - Request object containing authenticated user info.
-   * @returns The updated task.
-   */
+ /* ---------- UPDATE (ADMIN + EMPLOYEE) ---------- */
   @Patch(':id')
-  @UseGuards(RolesGuard)
-  @Roles('admin')
-  update(
-    @Param('id') id: string, 
+  async update(
+    @Param('id') id: string,
     @Body() updateTacheDto: UpdateTacheDto,
     @Request() req,
   ) {
-    console.log('Updating task, user:', req.user);
-    return this.tachesService.update(id, updateTacheDto);
+    const user = req.user;
+    console.log('Updating task, user:', user);
+
+    // 1. Récupérer la tâche (assigneA typé UserDocument)
+    const task = await this.tachesService.findOne(id);
+
+    // 2. Vérifier les droits
+    const isAdmin = user.role === 'Admin';                     // <-- rôle réel
+    const isOwner = task.assigneA._id.toString() === user.userId;
+
+    if (!isAdmin && !isOwner) {
+      throw new ForbiddenException(
+        'Accès refusé. Vous ne pouvez modifier que vos propres tâches ou être Admin.'
+      );
+    }
+
+    // 3. Restreindre les champs pour les employés
+    let payload: UpdateTacheDto = updateTacheDto;
+    if (!isAdmin) {
+      const forbidden = Object.keys(updateTacheDto).filter(k => k !== 'statut');
+      if (forbidden.length) {
+        throw new ForbiddenException(
+          'Les employés ne peuvent modifier que le statut de la tâche.'
+        );
+      }
+      payload = { statut: updateTacheDto.statut };
+    }
+
+    // 4. Mettre à jour
+    return this.tachesService.update(id, payload);
   }
 
   /**

@@ -136,21 +136,20 @@ export class AuthController {
   }
 
   // Update current user's profile (self-update)
-  @UseGuards(AuthenticationGuard)
-  @Put('profile')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update current user profile' })
-  @ApiResponse({ status: 200, description: 'Profile updated successfully.' })
-  @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  @ApiResponse({ status: 400, description: 'Invalid input data.' })
-  async updateProfile(
-    @Body() updateData: UpdateUserDto,
-    @Req() req,
-  ) {
-    const userId = req.userId; // From JWT token
-    return this.authService.updateUser(userId, updateData, userId);
-  }
-
+ @UseGuards(AuthenticationGuard)
+@Put('profile')
+@ApiBearerAuth()
+@ApiOperation({ summary: 'Update current user profile' })
+@ApiResponse({ status: 200, description: 'Profile updated successfully.' })
+@ApiResponse({ status: 401, description: 'Unauthorized.' })
+@ApiResponse({ status: 400, description: 'Invalid input data.' })
+async updateProfile(
+  @Body() updateData: UpdateUserDto,
+  @Req() req,
+) {
+  const userId = req.userId;
+  return this.authService.updateUserProfile(userId, updateData); // Use new method
+}
   // ========== ADMIN ENDPOINTS ==========
 
   // Get all users with pagination and filters (admin only)
